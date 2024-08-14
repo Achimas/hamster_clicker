@@ -4,6 +4,16 @@ import random
 import requests
 from dotenv import load_dotenv
 
+def send_to_TG(text, chat_id = None, bot_token = None):
+    url = f"https://api.telegram.org/{bot_token}/sendMessage"
+    params = {
+    'chat_id': chat_id,
+    'text': text
+    }
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+       print (text)
+    
 def buy_best_upgrade():
     headers = {
         'User-Agent': 'Mozilla/5.0 (Android 12; Mobile; rv:102.0) Gecko/102.0 Firefox/102.0',
@@ -52,14 +62,16 @@ def buy_best_upgrade():
     response = requests.post(url, headers=headers, json=data)
     formatted_date = time.strftime("%d.%m.%Y %H:%M", time.localtime())
     if response.status_code == 200:
-        print (f"[{formatted_date}] Upgrade {most_efficient_upgrade[0]} is purcashed. Price {most_efficient_upgrade[2]}")
+        send_to_TG (f"[{formatted_date}] Upgrade {most_efficient_upgrade[0]} is purcashed. Price {most_efficient_upgrade[2]}", chat_id = chat_id, bot_token = bot_token)
         return True
     if response.status_code == 400:
-        print (f"[{formatted_date}] Upgrade {most_efficient_upgrade[0]} cannot be percashed. Price {most_efficient_upgrade[2]}")
+        send_to_TG (f"[{formatted_date}] Upgrade {most_efficient_upgrade[0]} cannot be percashed. Price {most_efficient_upgrade[2]}", chat_id = chat_id, bot_token = bot_token)
 
 # Ввод токена авторизации
 # Ввод порога вместимости монет
 load_dotenv()
+chat_id = os.getenv("chat_id")
+bot_token = os.getenv("bot_token")
 authorization = os.getenv("authorization")
 # В моем случае предел равен 7000
 try: load_capacity =  os.getenv("capacity")
@@ -77,12 +89,12 @@ while True:
         json={}
     )
     try: taps = response.json().get('clickerUser', {}).get('availableTaps', 0)
-    except Exception as e: print(e)
+    except Exception as e: send_to_TG(e, chat_id = chat_id, bot_token = bot_token)
 
     # Если тапов меньше 30, ждем пока их количество не достигнет capacity
     if taps < 30:
         formatted_date = time.strftime("%d.%m.%Y %H:%M", time.localtime())
-        print(f"[{formatted_date}] Taps are less than 30. Waiting to reach {capacity} again...")
+        send_to_TG(f"[{formatted_date}] Taps are less than 30. Waiting to reach {capacity} again...", chat_id = chat_id, bot_token = bot_token)
         while taps < capacity:
             formatted_date = time.strftime("%d.%m.%Y %H:%M", time.localtime())
             response = requests.post(
@@ -95,8 +107,8 @@ while True:
             )
             if response.status_code == 200:
                 try: taps = response.json().get('clickerUser', {}).get('availableTaps', 0)
-                except Exception as e: print(f"[{formatted_date}] Error - {e}")
-                else: print(f"[{formatted_date}] Available taps - {taps}")
+                except Exception as e: send_to_TG(f"[{formatted_date}] Error - {e}", chat_id = chat_id, bot_token = bot_token)
+                else: send_to_TG(f"[{formatted_date}] Available taps - {taps}", chat_id = chat_id, bot_token = bot_token)
             time.sleep(420)
         continue
 
@@ -123,7 +135,7 @@ while True:
         formatted_date = time.strftime("%d.%m.%Y %H:%M", time.localtime())
         raw_balance = int(tap_response.json().get('clickerUser', {}).get("balanceCoins", 0))+count
         balance = f"{raw_balance:,}".replace(",", "'")
-        print (f"[{formatted_date}] Response on {count} taps successfully posted. Balance - {balance}")
+        send_to_TG (f"[{formatted_date}] Response on {count} taps successfully posted. Balance - {balance}", chat_id = chat_id, bot_token = bot_token)
 
     money_enough = True
     while money_enough:
