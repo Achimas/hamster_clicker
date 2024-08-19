@@ -1,4 +1,4 @@
 .env
 .venv/
-.auto_buy.py
-.upgrades.py
+.auto_buy
+.upgrades
