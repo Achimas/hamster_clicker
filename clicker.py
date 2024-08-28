@@ -50,55 +50,45 @@ def buy_best_upgrade():
             print(f"Sth happens wrong in checking:\n'{i}'")
             print(e)
         try:
-            if efficiency_coeff > 0.0035:
+            if efficiency_coeff > 0.003:
                 top_up = [id, efficiency_coeff, price]
                 toppest_upgrades.append(top_up)
         except Exception as e:
             print(f"Sth happens wrong in adding to list:\n'{i}'")
             print(e)
-    formatted_date = time.strftime("%d.%m.%Y %H:%M", time.localtime())
-    print(f"[{formatted_date}] Buy_upgrade functions is called:")
+    formatted_date = time.strftime("%d.%m.%Y %H:%M", time. localtime())
+    toppest_upgrades.pop(0)
     print (toppest_upgrades)
-    for up in toppest_upgrades:
-            if up[2] != 0:
-                upgrade_id = up[0]
-                timestamp = int(time.time() * 1000)
-                url = "https://api.hamsterkombatgame.io/clicker/buy-upgrade"
-                headers = {
-                    "Content-Type": "application/json",
-                    "Authorization": authorization,
-                    "Origin": "https://hamsterkombat.io",
-                    "Referer": "https://hamsterkombat.io/"
-                }
-                data = {
-                    "upgradeId": upgrade_id,
-                    "timestamp": timestamp
-                }
-                try:
-                    response = requests.post(url, headers=headers, json=data)
-                except Exception:
-                    print(Exception)
-                if response.status_code == 200:
-                    formatted_date = time.strftime("%d.%m.%Y %H:%M", time.localtime())
-                    text = f"[{formatted_date}] <b>Upgrade {up[0]} is purcashed.</b>\nPrice - {up[2]}"
-                    send_to_TG(text, chat_id=chat_id,
-                               bot_token=bot_token)
- #               if response.status_code == 400:
-  #                  print(f"Upgrade {up[0]} cannot be percashed. Price {up[2]}")
-    print(f"[{formatted_date}] Buy_upgrade functions is ends")
+    sorted_upgrades = sorted(toppest_upgrades, key=lambda x: x[1])
+    print (sorted_upgrades)
+    for up in sorted_upgrades:
+        upgrade_id = up[0]
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": authorization,
+            "Origin": "https://hamsterkombat.io",
+            "Referer": "https://hamsterkombat.io/"
+        }
+        data = {
+            "upgradeId": upgrade_id,
+            "timestamp": int(time.time() * 1000)
+        }
+        try:
+            response = requests.post("https://api.hamsterkombatgame.io/clicker/buy-upgrade",
+                                     headers=headers, json=data)
+        except Exception as e:
+            send_to_TG(e, chat_id=chat_id,
+                        bot_token=bot_token)
+        if response and response.status_code == 200:
+            formatted_date = time.strftime("%d.%m.%Y %H:%M", time.localtime())
+            price = f"{up[2]:,}".replace(",", "'")
+            text = f"[{formatted_date}]\nUpgrade {up[0]} is purcashed.\nPrice - <b>{price}</b>"
+            send_to_TG(text, chat_id=chat_id,
+                        bot_token=bot_token)
+#               if response.status_code == 400:
+#                  print(f"Upgrade {up[0]} cannot be percashed. Price {up[2]}")
 
-# Ввод токена авторизации
-# Ввод порога вместимости монет
-load_dotenv()
-chat_id = os.getenv("chat_id")
-bot_token = os.getenv("bot_token")
-authorization = os.getenv("authorization")
-# В моем случае предел равен 7000
-try: load_capacity =  os.getenv("capacity")
-except: load_capacity = None
-capacity = int(load_capacity)-2000 if load_capacity else 900
-
-while True:
+def get_avaliable_taps():
     # Получаем количество доступных тапов
     try: response = requests.post(
         'https://api.hamsterkombatgame.io/clicker/sync',
@@ -110,35 +100,31 @@ while True:
     )
     except Exception as e: send_to_TG(e, chat_id = chat_id, bot_token = bot_token)
     try: taps = response.json().get('clickerUser', {}).get('availableTaps', 0)
-    except Exception as e: send_to_TG(e, chat_id = chat_id, bot_token = bot_token)
+    except Exception as e:
+        send_to_TG(e, chat_id = chat_id, bot_token = bot_token)
+        taps = 14
+    return taps
 
-    # Если тапов меньше 30, ждем пока их количество не достигнет capacity
-    # if taps < 30:
-    #     formatted_date = time.strftime("%d.%m.%Y %H:%M", time.localtime())
-    #     send_to_TG(f"[{formatted_date}] Taps are less than 30. Waiting to reach {capacity} again...", chat_id = chat_id, bot_token = bot_token)
-    #     while taps < capacity:
-    #         formatted_date = time.strftime("%d.%m.%Y %H:%M", time.localtime())
-    #         response = requests.post(
-    #             'https://api.hamsterkombatgame.io/clicker/sync',
-    #             headers={
-    #                 'Content-Type': 'application/json',
-    #                 'Authorization': authorization
-    #             },
-    #             json={}
-    #         )
-    #         if response.status_code == 200:
-    #             try: taps = response.json().get('clickerUser', {}).get('availableTaps', 0)
-    #             except Exception as e: send_to_TG(f"[{formatted_date}] Error - {e}", chat_id = chat_id, bot_token = bot_token)
-    #             else: send_to_TG(f"[{formatted_date}] Available taps - {taps}", chat_id = chat_id, bot_token = bot_token)
-    #         time.sleep(420)
-    #     continue
+# загрузка из переменных окружения
+load_dotenv()
+chat_id = os.getenv("chat_id")
+bot_token = os.getenv("bot_token")
+authorization = os.getenv("authorization")
+# В моем случае предел равен 7000
+try: load_capacity =  os.getenv("capacity")
+except: load_capacity = None
+capacity = int(load_capacity)-2000 if load_capacity else 900
 
+while True:
+    # Получаем количество доступных тапов
+    taps = get_avaliable_taps()
     count = int(random.uniform(0, taps))
 
     time.sleep(1)
 
     # Отправляем запрос для выполнения тапов
-    tap_response = requests.post(
+    try:
+        tap_response = requests.post(
         'https://api.hamsterkombatgame.io/clicker/tap',
         headers={
             'Content-Type': 'application/json',
@@ -150,12 +136,14 @@ while True:
             'timestamp': int(time.time())
         }
     )
+    except Exception as e:
+        send_to_TG (e, chat_id = chat_id, bot_token = bot_token)
     try:
         if tap_response.status_code == 200:
             formatted_date = time.strftime("%d.%m.%Y %H:%M", time.localtime())
             raw_balance = int(tap_response.json().get('clickerUser', {}).get("balanceCoins", 0))+count
             balance = f"{raw_balance:,}".replace(",", "'")
-            send_to_TG (f"[{formatted_date}] Response on {count} taps successfully posted.\nBalance - <b>{balance}</b>", chat_id = chat_id, bot_token = bot_token)
+            send_to_TG (f"[{formatted_date}]\nResponse on {count} taps successfully posted.\nBalance - <b>{balance}</b>", chat_id = chat_id, bot_token = bot_token)
     except Exception:
         print(Exception)
     time.sleep(1)
